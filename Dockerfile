@@ -17,6 +17,7 @@ ENV PHPIZE_DEPS \
 		make \
 		pkgconf \
 		re2c
+
 RUN apk add --no-cache --virtual .persistent-deps \
 		ca-certificates \
 		curl \
@@ -99,7 +100,11 @@ RUN set -xe \
 		libsodium-dev \
 		libxml2-dev \
 		sqlite-dev \
-	\
+        openldap-dev \
+        autoconf \
+        gcc \
+        glib-dev \
+        musl-dev \
 	&& export CFLAGS="$PHP_CFLAGS" \
 		CPPFLAGS="$PHP_CPPFLAGS" \
 		LDFLAGS="$PHP_LDFLAGS" \
@@ -110,9 +115,7 @@ RUN set -xe \
 		--build="$gnuArch" \
 		--with-config-file-path="$PHP_INI_DIR" \
 		--with-config-file-scan-dir="$PHP_INI_DIR/conf.d" \
-		\
 		--disable-cgi \
-		\
 # --enable-ftp is included here because ftp_ssl_connect() needs ftp to be compiled statically (see https://github.com/docker-library/php/issues/236)
 		--enable-ftp \
 # --enable-mbstring is included here because otherwise there's no way to get pecl to use it properly (see https://github.com/docker-library/php/issues/195)
@@ -121,17 +124,15 @@ RUN set -xe \
 		--enable-mysqlnd \
 # https://wiki.php.net/rfc/libsodium
 		--with-sodium \
-		\
 		--with-curl \
 		--with-libedit \
 		--with-openssl \
 		--with-zlib \
         --with-pdo-mysql \
-		\
+        --with-ldap \
 # bundled pcre does not support JIT on s390x
 # https://manpages.debian.org/stretch/libpcre3-dev/pcrejit.3.en.html#AVAILABILITY_OF_JIT_SUPPORT
 		$(test "$gnuArch" = 's390x-linux-gnu' && echo '--without-pcre-jit') \
-		\
 		$PHP_EXTRA_CONFIGURE_ARGS \
 	&& make -j "$(nproc)" \
 	&& make install \
@@ -139,6 +140,16 @@ RUN set -xe \
 	&& make clean \
 	&& cd / \
 	&& docker-php-source delete \
+    && wget https://github.com/phpredis/phpredis/archive/4.0.0.tar.gz \
+    && tar xzvf 4.0.0.tar.gz \
+    && cd phpredis-4.0.0 \
+    && phpize \
+    && ./configure \
+    && make \
+    && make install \
+    && echo 'extension=redis.so' > /usr/local/etc/php/conf.d/redis.ini \
+    && rm -rf 4.0.0.tar.gz phpredis-4.0.0 \
+
 	\
 	&& runDeps="$( \
 		scanelf --needed --nobanner --format '%n#p' --recursive /usr/local \
