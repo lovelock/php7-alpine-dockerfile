@@ -147,8 +147,19 @@ RUN set -xe \
     && ./configure \
     && make \
     && make install \
+    && cd / \
     && echo 'extension=redis.so' > /usr/local/etc/php/conf.d/redis.ini \
     && rm -rf 4.0.0.tar.gz phpredis-4.0.0 \
+    && wget https://xdebug.org/files/xdebug-2.7.0alpha1.tgz \
+    && tar xzvf xdebug-2.7.0alpha1.tgz \
+    && cd xdebug-2.7.0alpha1 \
+    && phpize \
+    && ./configure \
+    && make \
+    && make install \
+    && cd / \
+    && echo 'zend_extension=xdebug.so' > /user/local/etc/php/conf.d/xdebug.ini \
+
 
 	\
 	&& runDeps="$( \
